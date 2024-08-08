@@ -1,5 +1,9 @@
 name: release
 
+permissions:
+  contents: read
+  packages: write
+
 on:
   workflow_dispatch:
 #  push:
@@ -46,13 +50,19 @@ jobs:
 #    needs: create-release
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v2
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: Build artifacts
         run: |
