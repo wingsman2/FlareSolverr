@@ -7,39 +7,39 @@ on:
 #      - 'v*.*.*'
 
 jobs:
-  create-release:
-    name: Create release
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # get all commits, branches and tags (required for the changelog)
+#  create-release:
+#    name: Create release
+#    runs-on: ubuntu-22.04
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v3
+#        with:
+#          fetch-depth: 0 # get all commits, branches and tags (required for the changelog)
 
-      - name: Build changelog
-        id: github_changelog
-        run: |
-          changelog=$(git log $(git tag | tail -2 | head -1)..HEAD --no-merges --oneline)
-          changelog="${changelog//'%'/'%25'}"
-          changelog="${changelog//$'\n'/'%0A'}"
-          changelog="${changelog//$'\r'/'%0D'}"
-          echo "##[set-output name=changelog;]${changelog}"
+#      - name: Build changelog
+#        id: github_changelog
+#        run: |
+#          changelog=$(git log $(git tag | tail -2 | head -1)..HEAD --no-merges --oneline)
+#          changelog="${changelog//'%'/'%25'}"
+#          changelog="${changelog//$'\n'/'%0A'}"
+#          changelog="${changelog//$'\r'/'%0D'}"
+#          echo "##[set-output name=changelog;]${changelog}"
 
-      - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          body: ${{ steps.github_changelog.outputs.changelog }}
-          draft: false
-          prerelease: false
+#      - name: Create release
+#        id: create_release
+#        uses: actions/create-release@v1
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+#        with:
+#          tag_name: ${{ github.ref }}
+#          release_name: ${{ github.ref }}
+#          body: ${{ steps.github_changelog.outputs.changelog }}
+#          draft: false
+#          prerelease: false
 
   build-linux-package:
     name: Build Linux binary
-    needs: create-release
+#    needs: create-release
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
@@ -59,38 +59,62 @@ jobs:
           cd src
           python build_package.py
 
-      - name: Upload release artifacts
-        uses: alexellis/upload-assets@0.4.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          asset_paths: '["./dist/flaresolverr_*"]'
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-  build-windows-package:
-    name: Build Windows binary
-    needs: create-release
-    runs-on: windows-2022
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
         with:
-          fetch-depth: 0 # get all commits, branches and tags (required for the changelog)
+          build-args: |
+            MAINTAINER=${{ github.repository_owner }}
+            BRANCH=${{ github.ref_name }}
+            SOURCE_COMMIT=${{ github.sha }}
+          context: .
+          platforms: |
+            linux/amd64
+            linux/arm/v7
+            linux/arm64
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+#      - name: Upload release artifacts
+#        uses: alexellis/upload-assets@0.4.0
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+#        with:
+#          asset_paths: '["./dist/flaresolverr_*"]'
 
-      - name: Build artifacts
-        run: |
-          python -m pip install -r requirements.txt
-          python -m pip install pyinstaller==5.13.0
-          cd src
-          python build_package.py
+#  build-windows-package:
+#    name: Build Windows binary
+#    needs: create-release
+#    runs-on: windows-2022
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v3
+#        with:
+#          fetch-depth: 0 # get all commits, branches and tags (required for the changelog)
 
-      - name: Upload release artifacts
-        uses: alexellis/upload-assets@0.4.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-        with:
-          asset_paths: '["./dist/flaresolverr_*"]'
+#      - name: Setup Python
+#        uses: actions/setup-python@v4
+#        with:
+#          python-version: '3.11'
+
+#      - name: Build artifacts
+#        run: |
+#          python -m pip install -r requirements.txt
+#          python -m pip install pyinstaller==5.13.0
+#          cd src
+#          python build_package.py
+
+#      - name: Upload release artifacts
+#        uses: alexellis/upload-assets@0.4.0
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+#        with:
+#          asset_paths: '["./dist/flaresolverr_*"]'
