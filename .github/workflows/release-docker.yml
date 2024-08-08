@@ -1,12 +1,13 @@
 name: release-docker
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
-  pull_request:
-    branches:
-      - master
+  workflow_dispatch:
+#  push:
+#    tags:
+#      - 'v*.*.*'
+#  pull_request:
+#    branches:
+#      - master
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
