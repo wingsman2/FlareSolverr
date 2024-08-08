@@ -5,6 +5,9 @@ on:
 #  push:
 #    tags:
 #      - 'v*.*.*'
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
 #  create-release:
@@ -37,15 +40,14 @@ jobs:
 #          draft: false
 #          prerelease: false
 
+
   build-linux-package:
     name: Build Linux binary
 #    needs: create-release
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # get all commits, branches and tags (required for the changelog)
+        uses: actions/checkout@v2
 
       - name: Setup Python
         uses: actions/setup-python@v4
